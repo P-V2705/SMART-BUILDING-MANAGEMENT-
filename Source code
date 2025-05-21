@@ -1,0 +1,339 @@
+#define BLYNK_TEMPLATE_ID "TMPL6Zk9k-q-m"
+#define BLYNK_TEMPLATE_NAME "Smart Building"
+#define BLYNK_AUTH_TOKEN "Ubdb9gQeGHUovKRUe0qUv2QGwlRRgfEI"
+
+#define VIRTUAL_HUMIDITY_PIN V9
+#define VIRTUAL_TEMPERATURE_PIN V8
+
+#include <Wire.h>
+#include <Adafruit_SSD1306.h>
+#include <DHT.h>
+#include <RTClib.h>
+#include <ESP32Servo.h>
+#include <BlynkSimpleEsp32.h>
+#include <WiFiClient.h>
+#include <WiFi.h>
+
+#define BLYNK_PRINT Serial
+
+char auth[] = BLYNK_AUTH_TOKEN;
+
+char ssid[] = "Wokwi-GUEST";
+char password[] = "";
+
+BlynkTimer timer;
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define DHTPIN 5
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
+
+RTC_DS3231 rtc;
+
+Servo myservo; // Create a servo object
+
+const int buttonPin = 23;
+int buttonState = 0;
+int lastButtonState = 0;
+
+void setup() {
+  pinMode(buttonPin, INPUT);
+  pinMode(4, OUTPUT);
+  pinMode(2, OUTPUT);
+  pinMode(17, INPUT);
+  Serial.begin(9600);
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("WiFi connected");
+
+  Blynk.begin(auth, ssid, password);
+  // Initialize Blynk with your authentication token, SSID, and password
+
+  if(!rtc.begin()) {
+    Serial.println(F("Couldn't find RTC"));
+    while (1);
+  }
+
+  if (rtc.lostPower()) {
+    Serial.println(F("RTC lost power, let's set the time!"));
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
+
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+
+  dht.begin();
+  display.display();
+  delay(2000);
+  display.clearDisplay();
+
+  myservo.attach(32); // Attach the servo signal wire to pin 6
+  digitalWrite(4, HIGH);
+  digitalWrite(2, HIGH);
+  delay(1000);
+  digitalWrite(4, LOW);
+  digitalWrite(2, LOW);
+}
+
+BLYNK_WRITE(V1) { // Function to control LED from Blynk app
+  int ledState = param.asInt(); // Read incoming value
+  digitalWrite(4, ledState);
+}
+
+BLYNK_WRITE(V2) { // Function to control Buzzer from Blynk app
+  int buzzerState = param.asInt(); // Read incoming value
+  digitalWrite(2, buzzerState);
+}
+
+BLYNK_WRITE(V0) { // Function to control Buzzer from Blynk app
+  int servoPosition = param.asInt(); // Read incoming value from the Slider (0 to 180)
+
+  myservo.write(servoPosition); 
+}
+
+void sendSensorDataToBlynk() {
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+  
+  if (isnan(humidity) || isnan(temperature)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  Blynk.virtualWrite(VIRTUAL_HUMIDITY_PIN, humidity);
+  Blynk.virtualWrite(VIRTUAL_TEMPERATURE_PIN, temperature);
+}
+
+void loop() {
+
+  Blynk.run(); // Run Blynk loop
+  sendSensorDataToBlynk();
+  
+  DateTime now = rtc.now();
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+  buttonState = digitalRead(buttonPin);
+
+  if (buttonState != lastButtonState) {
+    if (buttonState == LOW) {      
+      digitalWrite(4, HIGH);
+    } else {  
+      digitalWrite(4, LOW);
+    }
+    delay(50);  // debounce delay to avoid false triggering
+  }
+  
+  lastButtonState = buttonState;
+  
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.print("Date: ");
+  display.print(now.year(), DEC);
+  display.print('/');
+  display.print(now.month(), DEC);
+  display.print('/');
+  display.print(now.day(), DEC);
+  display.println();
+  display.print("Time: ");
+  display.print(now.hour(), DEC);
+  display.print(':');
+  display.print(now.minute(), DEC);
+  display.print(':');
+  display.print(now.second(), DEC);
+  display.println();
+
+  display.print("Temp: ");
+  display.print(temperature);
+  display.println(" C");
+  display.print("Humidity: ");
+  display.print(humidity);
+  display.println(" %");
+  display.display();
+
+  int s = digitalRead(17);
+  if (s == HIGH)
+     {
+  // Control the servo using the relay
+  digitalWrite(32, LOW); // Turn on the relay
+  myservo.write(180); // Move the servo to position 90 degrees
+  delay(2000); // Wait for 2 seconds
+  myservo.write(90); // Move the servo to position 180 degrees
+  delay(2000); // Wait for 2 seconds
+  digitalWrite(32, HIGH); // Turn off the relay
+      }
+  delay(2000); // Wait for 2 seconds before repeating
+}
+
+
+/*
+
+#define BLYNK_TEMPLATE_ID "TMPL6Zk9k-q-m"
+#define BLYNK_TEMPLATE_NAME "Smart Building"
+#define BLYNK_AUTH_TOKEN "8Ud86ISYff0tc2_PfEDoMHGg_d_19jv1"
+
+#define BLYNK_PRINT Serial
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+#include "DHTesp.h"
+
+char auth[] = BLYNK_AUTH_TOKEN;
+
+char ssid[] = "Wokwi-GUEST";
+char password[] = "";
+
+BlynkTimer timer;
+DHTesp dhtSensor;
+
+const int led = 23;
+const int dev2 = 36;
+const int dev3 = 21;
+const int dev4 = 19;
+const int dev5 = 18;
+//dht sensor
+const int dht = 15;
+//push buttons
+const int button1 = 2;
+
+
+int relay_s_dev1 = 0;
+int relay_s_dev2 = 0;
+int relay_s_dev3 = 0;
+int relay_s_dev4 = 0;
+int relay_s_dev5 = 0;
+
+#define vpin1 V1
+#define vpin2 V2
+#define vpin3 V3
+#define vpin4 V4
+#define vpin5 V5
+
+BLYNK_CONNECTED(){
+  Blynk.syncVirtual(vpin1);
+  Blynk.syncVirtual(vpin2);
+  Blynk.syncVirtual(vpin3);
+  Blynk.syncVirtual(vpin4);
+  Blynk.syncVirtual(vpin5);
+}
+
+BLYNK_WRITE(vpin1){
+  relay_s_dev1 = param.asInt(); 
+  digitalWrite(dev1, relay_s_dev1);
+}
+
+BLYNK_WRITE(vpin2){
+  relay_s_dev2 = param.asInt(); 
+  digitalWrite(dev2, relay_s_dev2);
+}
+
+BLYNK_WRITE(vpin3){
+  relay_s_dev3 = param.asInt(); 
+  digitalWrite(dev3, relay_s_dev3);
+}
+
+BLYNK_WRITE(vpin4){
+  relay_s_dev4 = param.asInt(); 
+  digitalWrite(dev4, relay_s_dev4);
+}
+
+BLYNK_WRITE(vpin5){
+  relay_s_dev5 = param.asInt();
+  digitalWrite(dev5, relay_s_dev5);
+}
+
+void send_dht_val(){
+  TempAndHumidity data = dhtSensor.getTempAndHumidity();
+  float temp = data.temperature;
+  Blynk.virtualWrite(V8, temp);
+  float humidity = data.humidity;
+  Blynk.virtualWrite(V9, humidity);
+
+}
+void setup () {
+  pinMode(dev1, OUTPUT); 
+  pinMode(dev2, OUTPUT);
+  pinMode(dev3, OUTPUT);
+  pinMode(dev4, OUTPUT);
+  pinMode(dev5, OUTPUT); 
+
+  //push button
+  pinMode(button1, INPUT_PULLUP);
+
+  //dht sensor
+  dhtSensor.setup(dht, DHTesp::DHT22);
+  Serial.begin(115200);
+
+  //todo: blink led for once while starting up
+  digitalWrite(dev1, HIGH);
+  digitalWrite(dev2, HIGH);
+  digitalWrite(dev3, HIGH);
+  digitalWrite(dev4, HIGH);
+  digitalWrite(dev5, HIGH);
+  delay(1000);
+  digitalWrite(dev1, LOW);
+  digitalWrite(dev2, LOW);
+  digitalWrite(dev3, LOW);
+  digitalWrite(dev4, LOW);
+  digitalWrite(dev5, LOW);
+  delay(1000);
+  Blynk.begin(auth, ssid, password);
+}
+
+void button_status(){
+ // Serial.println(digitalRead(button1));
+  if(digitalRead(button1) == HIGH){
+    delay(500);
+    controlButton(1);
+    Blynk.virtualWrite(vpin1, relay_s_dev1);
+  }
+  /*else if(digitalRead(button2) == LOW){
+    delay(500);
+    controlButton(2);
+    Blynk.virtualWrite(vpin2, relay_s_dev2);
+  }
+
+
+void controlButton(int relayIn){
+  if(relayIn == 1){
+    relay_s_dev1 = !relay_s_dev1;
+    digitalWrite(dev1, relay_s_dev1);
+    delay(100);
+  }
+  else if(relayIn == 2){
+    relay_s_dev2 = !relay_s_dev2;
+    digitalWrite(dev2, relay_s_dev2);
+    delay(100);
+  }
+}
+
+
+void loop (){
+  Blynk.run();
+  timer.run();
+  button_status();
+  timer.setInterval(2000, send_dht_val);
+}
+
+
+
+
+
+
+#define BLYNK_TEMPLATE_ID "TMPL6Zk9k-q-m"
+#define BLYNK_TEMPLATE_NAME "Smart Building"
+#define BLYNK_AUTH_TOKEN "Ubdb9gQeGHUovKRUe0qUv2QGwlRRgfEI"*/
