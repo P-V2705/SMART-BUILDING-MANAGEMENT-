@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Building Mode Selector</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f7f8;
+      padding: 40px;
+    }
+    .container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 400px;
+      margin: auto;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    select, button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Building Mode Management</h2>
+  <form id="modeForm">
+    <label for="mode">Select Building Mode:</label>
+    <select id="mode" name="mode">
+      <option value="comfort">Comfort Mode</option>
+      <option value="energy_saving">Energy Saving Mode</option>
+      <option value="away">Away Mode</option>
+      <option value="night">Night Mode</option>
+      <option value="custom">Custom Mode</option>
+    </select>
+    
+    <button type="submit">Apply Mode</button>
+  </form>
+</div>
+
+<script>
+  document.getElementById('modeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const selectedMode = document.getElementById('mode').value;
+    alert("Mode applied: " + selectedMode);
+    // You can replace the alert with a real backend call using fetch()
+  });
+</script>
+
+</body>
+</html>
